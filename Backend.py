@@ -35,19 +35,19 @@ def query_faiss(query, embeddings):
     return results
 
 
-# Step 1: Download PDF
+
 pdf_file = download_pdf("https://www.indiacode.nic.in/bitstream/123456789/15351/1/iea_1872.pdf")
 
-# Step 2: Load & split
+
 chunks = load_and_split_pdf(pdf_file)
 
-# Step 3: Embeddings
+
 embeddings = get_embeddings()
 
-# Step 4: Create FAISS index
+
 create_faiss_index(chunks, embeddings)
 
-# Step 5: Query
+
 query = "Is it about Indian Laws ?"
 results = query_faiss(query, embeddings)
 
