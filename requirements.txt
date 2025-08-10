@@ -1,0 +1,9 @@
+flask
+streamlit
+requests
+pypdf
+sentence-transformers
+transformers
+faiss-cpu
+python-multipart
+uvicorn
