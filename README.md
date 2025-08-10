@@ -1,7 +1,8 @@
 # Legal-Laws: AI-Powered Legal Knowledge Base
 
 A  legal document analysis and Q&A system built with Streamlit, LangChain, and Google Gemini AI. This application allows users to upload legal documents (PDFs) and interact with them through an intelligent chat interface.
-
+##   Knowledge Base 
+    https://www.indiacode.nic.in/bitstream/123456789/15351/1/iea_1872.pdf
 ## 🔑 API Keys Required
 
 ### Google Gemini API
@@ -14,7 +15,7 @@ A  legal document analysis and Q&A system built with Streamlit, LangChain, and G
 ```
 User Upload → PDF Processing → Text Extraction → Chunking → Vectorization → FAISS Index Storage
 ```
-<code_block_to_apply_from>
+
 ```
 User Query → Query Vectorization → Similarity Search → Context Retrieval → LLM Processing → Response Generation
 ```
@@ -104,5 +105,4 @@ Temporary Files → Processing → Cleanup → Persistent Storage → Index Mana
 5. **Index Creation**: Vectors are stored in FAISS index for fast similarity search
 6. **Thread Storage**: Each conversation thread maintains its own FAISS index in `faiss_index/thread_[id]/`
 7. **Generates Response**: it generates the response with context and pdf uploads
-### 2. Query Processing Flow
 ```
