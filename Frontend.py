@@ -9,7 +9,8 @@ import uuid
 from datetime import datetime
 import shutil
 
-from Backend import load_and_split_pdf, get_embeddings, create_faiss_index, query_faiss
+from Backend import load_and_split_pdf, get_embeddings, create_faiss_index, query_faiss,initialize_knowledge_base_with_iea
+
 
 
 from langchain_community.vectorstores import FAISS
@@ -117,6 +118,7 @@ def process_pdf_with_threading(pdf_file, thread_id, progress_callback=None):
 
         if os.path.exists(f"{thread_faiss_path}/index.faiss"):
 
+        # ndian Evidence Act will be included
             vectorstore = FAISS.load_local(thread_faiss_path, embeddings, allow_dangerous_deserialization=True)
             vectorstore.add_documents(chunks)
         else:
@@ -138,7 +140,7 @@ def process_pdf_with_threading(pdf_file, thread_id, progress_callback=None):
         }
         st.session_state.thread_attachments[thread_id].append(attachment)
         
-        return True, f"Successfully processed {pdf_file.name}"
+        return True, f"Successfully processed {pdf_file.name} (with Indian Evidence Act included)"
         
     except Exception as e:
         return False, f"Error processing {pdf_file.name}: {str(e)}"
@@ -190,19 +192,24 @@ def query_knowledge_base(query, thread_id):
         thread_faiss_path = f"faiss_index/thread_{thread_id}"
         
         if not os.path.exists(f"{thread_faiss_path}/index.faiss"):
-            error_msg = "No documents have been uploaded to this thread yet. Please upload PDF documents first."
-            add_message_to_thread(thread_id, error_msg, "assistant", "error")
-            return error_msg
+
+            embeddings = get_embeddings()
+            initialize_knowledge_base_with_iea(embeddings, thread_faiss_path)
+            
+            system_msg = "📚 **System**: Knowledge base initialized with Indian Evidence Act, 1872. You can now ask questions about evidence law."
+            add_message_to_thread(thread_id, system_msg, "assistant", "system")
         
         embeddings = get_embeddings()
         faiss_results = query_faiss_thread_specific(query, embeddings, thread_faiss_path)
         
-        faiss_response = "** FAISS Search Results:**\n\n"
+        faiss_response = "**🔍 FAISS Search Results:**\n\n"
         for i, result in enumerate(faiss_results, 1):
             faiss_response += f"**Result {i}:**\n{result.page_content}\n\n"
             if hasattr(result, 'metadata'):
-                faiss_response += f"*Source: {result.metadata.get('source', 'Unknown')}*\n"
-                faiss_response += f"*Page: {result.metadata.get('page', 'Unknown')}*\n\n"
+                source = result.metadata.get('source', 'Unknown')
+                page = result.metadata.get('page', 'Unknown')
+                faiss_response += f"*Source: {source}*\n"
+                faiss_response += f"*Page: {page}*\n\n"
         
         add_message_to_thread(thread_id, faiss_response, "assistant", "faiss_results")
         
@@ -210,23 +217,20 @@ def query_knowledge_base(query, thread_id):
             try:
                 llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0.1, max_tokens=1000)
                 
-                context = f"""Based on the following search results from legal documents in this thread, please provide a comprehensive and accurate answer to: {query}
+                context = f"""Based on the following search results from legal documents (including Indian Evidence Act, 1872) in this thread, please provide a comprehensive and accurate answer to: {query}
 
 Search Results:
 """
                 for i, result in enumerate(faiss_results, 1):
                     context += f"Result {i}: {result.page_content}\n\n"
                 
-                context += "\nPlease provide a clear, well-structured response that directly addresses the query using the information from the search results."
+                context += "\nPlease provide a clear, well-structured response that directly addresses the query using the information from the search results. If the query relates to evidence law, prioritize information from the Indian Evidence Act, 1872."
                 
-
                 gemini_response = llm.invoke(context)
                 
-
-                ai_response = "**�� AI Analysis:**\n\n"
+                ai_response = "** AI Analysis:**\n\n"
                 ai_response += gemini_response.content
                 
-
                 add_message_to_thread(thread_id, ai_response, "assistant", "ai_analysis")
                 
                 return "Both search results and AI analysis have been added to the chat."
@@ -415,6 +419,8 @@ def main():
                                 st.markdown(message['content'])
                             elif message['type'] == 'error':
                                 st.error(f"**❌ Error:** {message['content']}")
+                            elif message['type'] == 'system':
+                                st.markdown(f"** System:** {message['content']}")
                             else:
                                 st.markdown(f"** Assistant:** {message['content']}")
                             
@@ -450,11 +456,11 @@ def main():
                             st.session_state.chat_messages[st.session_state.current_thread_id] = []
                             st.rerun()
         else:
-            st.header("�� Chat")
+            st.header(" Chat")
             st.info("Select a thread from the left panel to start chatting!")
     
 
-    with st.expander("🔧 System Status"):
+    with st.expander("System Status"):
         st.subheader("System Information")
         st.write(f"**LLM Status:** {' Ready' if st.session_state.llm_ready else 'Not Ready'}")
         st.write(f"**Processing Status:** {st.session_state.processing_status}")
